@@ -1,147 +1,80 @@
-# Guía de desarrollo
-
-### Agreupar por módulo y tipo
+#Guía de desarrollo
 
 
-### Utilizar conveciones en nombre de eventos del componente
+## Flujo
 
-Utilizar nombres de eventos fijos que denoten la característica del evento.
+- El punto de acceso es el archivo .htaccess, en donde seindica que cualquier solicitud de carpeta no encontrada 
+se redirija al archivo index.html
 
-- **onChange.** Emitido cuando la información del componente ha cambiado o en caso de una lista, cuando un elemento ha sido agregado, eliminado o modificado.
+- El archivo index.html carga todos los scripts y stylesheets de módulos y librerías requeridos para visualizar la página. 
+Cada módulo define sus componentes, servicios y rutas.
 
-```javascript
-//usuarios/components/template.html
-<usuarios-usuario
-  ng-repeat="item in $ctrl.lista"
-  on-change="$ctrl.actualizarItem(item, $event.data)"></usuarios-usuario>
-  
-//usuarios/components/usuario/component.js
-...
-function UsuariosUsuarioComponent(UsuariosUsuarioService){
+- El archivo main.js inicializa el módulo app
 
-  ...
+- El módulo contiene el componente `app`, el cual contiene un elemento con la directiva `uiView`
 
-  function actualizar(){
-    UsuariosUsuarioService.put($ctrl.idUsuario, $ctrl.data)
-      .then(function(response){
-        //Utilizamos el objeto $event para adjuntar toda la información emitida por el componente
-        var event = {data: response.data};
+- La direciva `uiView` observa la url y localiza el `state` que coincide con ésta.
 
-        $ctrl.onChange({$event: event});
-      });
-  }
-}
-```
+- Se compila un elemento utilizando las propiedades template y controller del state y se inserta en el elemento que contiene la directiva uiView
+Si en el elemento insertado se encuentra un uiView, se repite este proceso hasta que no haya más uiViews o no se obtenga coincidencia
+con los states configurados
 
-- **onClose.** Emitido cuando la información del componente ha cambiado o en caso de una lista, cuando un elemento ha sido agregado, eliminado o modificado.
 
-```javascript
-//usuarios/components/lista/template.html
-<div ng-repeat="item in $ctrl.items">
-  
-<usuarios-lista-item
+## Módulos
 
-  on-change="$ctrl.actualizarItem(item, $event.data)"></usuarios-usuario>
-</div>
-  
-//usuarios/components/usuario/component.js
-...
-function UsuariosUsuarioComponent(UsuariosUsuarioService){
+### Módulo `main`
 
-  ...
+Ubicar en el módulo `main` las rutinas para configurar el entorno e inicializar angular.
+El módulo `main` no configura rutas ni define componentes o servicios.
 
-  function actualizar(){
-    UsuariosUsuarioService.put($ctrl.idUsuario, $ctrl.data)
-      .then(function(response){
-        //Utilizamos el objeto $event para adjuntar toda la información emitida por el componente
-        var event = {data: response.data};
+### Módulo `app`
 
-        $ctrl.onChange({$event: event});
-      });
-  }
-}
-```
+Ubicar en el módulo `app` la configuración principal de la aplicación, así como los components y servicios específicos al funcionamiento global de ésta.
+Aquí se encontrará toda la lógica para iniciar y terminar sesión.
+
+Declarar el state `app.inicio` para la url "". Este state cargará el componente `<app-inicio/>`, 
+Aquí se ubicará la interface de bienvenida al usuario.
+
+Declarar el state `app.dashboard` para la url "/dashboard" y cargar el componente `<app-dashboard/>`
+Aquí se ubicará el panel principal de la aplicación con los accesos a los diferentes módulos.
+
+### Archivo `module.js`
+
+Cada módulo contiene en su raiz un archivo `module.js`. La función de este archivo será únicamente declarar el módulo
+
+### Archivo `config.js`
+
+Si es necesario realizar una configuración, declarar variables o constantes, generar un archivo `config.js`
+y utilizar el bloque correspondiente para ese propósito. 
+
+### Agrupar en subcarpetas por característica
+
+Ubicar cada archivo en subcarpetas dentro de cada módulo según su función.
+
+- Componentes: /components
+- Servicios: /services
+- Rutas: /routes
+
+
+## Estilo de código
 
 ### Utilizar sufijos
 
-Utilizar el sufijo `Component` o `Service` en el nombre de la función. 
+Utilizar el sufijo `Component` o `Service` en el nombre de la función.
 
 Ejemplo: UsuariosUsuarioComponent
 
 ### Utilizar UpperCamelCase
 
-Utilizar el estilo UpperCamelCase al nombrar la función del componente o servicio para denotar que se trata de un constructor. 
+Utilizar el estilo UpperCamelCase al nombrar la función del componente o servicio para denotar que se trata de un constructor.
 
 Ejemplo: UsuariosUsuarioService
 
-## Ejemplos
+## Utilizar modalidad estricta
 
-### Componente
+Especificar `use strict` al inicio de cada documento
 
-```javascript
-//usuarios/components/usuario/component.js
-"use strict";
+### IIFE (Immediately Invoked Function Expression)
 
-angular.module("usuarios")
-  .component("usuariosUsuario", {
-    templateUrl: "/usuarios/components/usuario/template.html",
-    controller: UsuariosUsuarioComponent,
-    bindings:{
-      idUsuario: "<"
-    }
-  });
-  
-function UsuariosUsuarioComponent(UsuariosUsuarioService){
-  var $ctrl = this;//Referencia al controlador
-  
-  $ctrl.$onInit = $onInit;//Utilizar hook $onInit para inicializar el componente
-  $ctrl.actualizar = actualizar;//Definir al inicio del controlador sus métodos
-  $ctrl.actualizando = false;//Definir al inicio del controlador sus variables
-  $ctrl.error = null;
-  $ctrl.usuario = undefined;
-  
-  function $onInit(){
-    UsuariosUsuarioService.get($ctrl.idUsuario)
-      .then(function(response){
-        $ctrl.usuario = response.data;
-      });
-  }
-  
-  function actualizar(){
-    if($ctrl.actualizando)
-      return;
-      
-    $ctrl.actualizando = true;
-    $ctrl.error = null;
-    
-    UsuariosUsuarioService.put($ctrl.idUsuario, $ctrl.data)
-      .then(function(response){
-        $ctrl.data = response.data;
-      })
-      .catch(function(response){
-        $ctrl.error = response.data;
-      })
-      .finally(function(response){
-        $ctrl.actualizando = false;
-      });
-  }
-}
-```
-
-### Ruta
-
-```javascript
-/** usuarios/services/usuario/service.js **/
-"use strict";
-
-angular.module("usuarios")
-  .config(function($stateProvider){
-    $stateProvider.state("usuarios.usuario", {
-      url: "/usuarios/{id_usuario}",
-      template: "<usuarios-usuario id-usuario='idUsuario'/>",
-      controller: function($scope, $stateParams){
-        $scope.idUsuario = $stateParams.id_usuario
-      }
-    });
-  });
-```
+Para mantener el código visualmente "limpio" escribir todo sin necesidad de encapsularlo en una IIFE, 
+pero encapsularlo al momento de compilar y minificar. 
